@@ -1,0 +1,13 @@
+[Unit]
+Description=Trust4.0 Demo Enforcer server
+After=syslog.target network.target 
+
+[Service]
+WorkingDirectory=/opt/trustvis/enforcer
+ExecStart=/usr/bin/sbt run
+Type=simple
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+mysql:
+  host: localhost
+  user: trustvis
+  password: trustvis
+  database: trustvis
+
+enforcer:
+  url: http://localhost:3100/

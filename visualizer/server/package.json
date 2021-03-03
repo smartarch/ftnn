@@ -1,0 +1,19 @@
+{
+  "name": "trust4.0-demo-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "author": "Tomas Bures",
+  "license": "MIT",
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "dependencies": {
+    "axios": "^0.16.2",
+    "moment": "^2.18.1",
+    "moment-timezone": "^0.5.21"
+  }
+}

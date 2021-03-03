@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  mysql:
+    image: mariadb:10.4
+    environment:
+    - MYSQL_ROOT_PASSWORD=trustvis
+    - MYSQL_DATABASE=trustvis
+    - MYSQL_USER=trustvis
+    - MYSQL_PASSWORD=trustvis
+    volumes:
+    - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:5
+    volumes:
+    - redis-data:/data
+
+  trustvis-visualizer:
+    build: visualizer
+    command: ${TRUSTVIS_SETTINGS}
+    ports:
+    - "8080:8080"
+    - "8081:8081"
+    - "8082:8082"
+
+  trustvis-enforcer:
+    build: enforcer
+
+  elasticsearch:
+    image: elasticsearch:6.8.3
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+volumes:
+  mysql-data:
+  redis-data:
+  elasticsearch-data:
+

@@ -1,0 +1,3 @@
+[submodule "visualizer/ivis-core"]
+	path = visualizer/ivis-core
+	url = https://github.com/smartarch/ivis-core.git

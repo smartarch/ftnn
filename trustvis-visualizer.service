@@ -1,0 +1,14 @@
+[Unit]
+Description=Trust4.0 Demo Visualization server
+After=syslog.target network.target mariadb.service redis.service
+
+[Service]
+Environment="NODE_ENV=production"
+WorkingDirectory=/opt/trustvis/visualizer/server
+ExecStart=/usr/bin/node index.js
+Type=simple
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

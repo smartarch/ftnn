@@ -1,0 +1,9 @@
+# This is not a standalone script. It provides common functions to server-*.sh scripts
+
+productId=trustvis
+productLabel="Trust4.0 Demo Visualization"
+
+. $SCRIPT_PATH/../ivis-core/setup/functions
+
+
+
