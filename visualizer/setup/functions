@@ -1,9 +1,10 @@
 # This is not a standalone script. It provides common functions to server-*.sh scripts
 
-productId=trustvis
-productLabel="Trust4.0 Demo Visualization"
+productId=ftnn
+productLabel="FTNN Visualization"
+ivisCorePath="$SCRIPT_PATH/../ivis-core"
 
-. $SCRIPT_PATH/../ivis-core/setup/functions
+. $ivisCorePath/../ivis-core/setup/functions
 
 
 

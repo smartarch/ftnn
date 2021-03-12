@@ -8,7 +8,7 @@ import {NavLink} from "../../ivis-core/client/src/lib/page";
 
 import ivisConfig from "ivisConfig";
 
-em.set('app.title', 'Trust4.0 Demo');
+em.set('app.title', 'FTNN');
 
 em.on('client.installRoutes', (structure, t) => {
     structure.children['workspaces'].children['factory-map'] = {

@@ -30,10 +30,4 @@ router.getAsync('/status', passport.loggedIn, async (req, res) => {
     return res.json(resp.data);
 });
 
-router.postAsync('/access/:workerId', passport.loggedIn, passport.csrfProtection, async (req, res) => {
-    const resp = await axios.post(getEnforcerUrl('access/' + req.params.workerId));
-    return res.json(resp.data);
-});
-
-
 module.exports = router;

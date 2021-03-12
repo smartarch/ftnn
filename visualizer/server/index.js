@@ -18,11 +18,6 @@ em.on('app.installRoutes', app => {
     app.use('/sim', sim);
 });
 
-em.on('app.installAPIRoutes', app => {
-    const accessApi = require('./routes/access');
-    app.use('/', accessApi);
-});
-
 em.on('server.setup', (server, app, appType) => {
     if (appType === AppType.API) {
         server.keepAliveTimeout = 0;

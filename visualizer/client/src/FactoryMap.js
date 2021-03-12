@@ -33,12 +33,6 @@ const SwipeCardState = {
 const refreshInterval = 50;
 const minorStepsInRefetchPeriod = 5;
 
-const AccessResultToSwipeCardStateMapping = {
-    'none': SwipeCardState.IDLE,
-    'allowed': SwipeCardState.ALLOWED,
-    'not allowed': SwipeCardState.NOT_ALLOWED
-};
-
 @withComponentMixins([
     withTranslation,
     withErrorHandling,
@@ -100,22 +94,6 @@ const AccessResultToSwipeCardStateMapping = {
     }
 
     @withAsyncErrorHandler
-    async swipeCard(selWorkerId) {
-        const resp = await axios.post(getUrl('sim/access/' + selWorkerId));
-
-        this.setState({
-            swipeCardState: AccessResultToSwipeCardStateMapping[resp.data.result]
-        });
-
-        clearTimeout(this.swipeCardTimeout);
-        this.swipeCardTimeout = setTimeout(() => {
-            this.setState({
-                swipeCardState: SwipeCardState.IDLE
-            });
-        }, 1000)
-    }
-
-    @withAsyncErrorHandler
     async getStatus() {
         const resp = await axios.get(getUrl('sim/status'));
         const ts = moment(resp.data.time);
@@ -131,8 +109,7 @@ const AccessResultToSwipeCardStateMapping = {
             kf.push({
                 ts,
                 workers: resp.data.workers,
-                permissions: resp.data.permissions,
-                rejectedPermissions: resp.data.rejectedPermissions
+                permissions: resp.data.permissions
             });
 
             const playState = resp.data.playState;
@@ -181,8 +158,6 @@ const AccessResultToSwipeCardStateMapping = {
                             let symbol;
                             if (key.endsWith('foreman')) {
                                 symbol = 'foreman';
-                            } else if (key === 'A-worker-001') {
-                                symbol = 'user';
                             } else {
                                 symbol = 'worker'
                             }
@@ -202,8 +177,7 @@ const AccessResultToSwipeCardStateMapping = {
                     this.setState({
                         ts,
                         workers,
-                        permissions: last.permissions,
-                        rejectedPermissions: last.rejectedPermissions
+                        permissions: last.permissions
                     });
                 }
             }
@@ -277,19 +251,6 @@ const AccessResultToSwipeCardStateMapping = {
                 }
             }
 
-            const rejectedPerms = [];
-            for (const perm of this.state.rejectedPermissions) {
-                if (perm[0] === selWorkerId) {
-                    const reasons = [];
-                    for (const rejPerm of perm[3]) {
-                        reasons.push(<span key={`${rejPerm[1]}-${rejPerm[2]}-${rejPerm[3]}`} className={`badge badge-warning ${styles.perm}`}>{rejPerm[1]} {rejPerm[3]} {rejPerm[2]}</span>);
-                    }
-
-                    rejectedPerms.push(<li key={`${perm[0]}-${perm[1]}-${perm[2]}`}><span className={`badge badge-danger ${styles.perm}`}>{perm[1]} {perm[2]}</span> <span className={styles.rejectedBy}>rejected by</span> {reasons}</li>);
-                }
-
-            }
-
             workerDetails = (
                 <>
                     <div className={`card-body ${styles.detailsSection}`}>
@@ -302,18 +263,6 @@ const AccessResultToSwipeCardStateMapping = {
                         <div className={`card-title ${styles.detailsSectionHeader}`}>{t('Permissions')}</div>
                         <div className="card-text">
                             {perms.length > 0 ? perms : t('None')}
-                        </div>
-                    </div>
-
-                    <div className={`card-body ${styles.detailsSection}`}>
-                        <div className={`card-title ${styles.detailsSectionHeader}`}>{t('Denied Permissions (due to privacy rules)')}</div>
-                        <div className="card-text">
-                            {rejectedPerms.length > 0 ?
-                                <ul className={styles.rejectedPerms}>
-                                    {rejectedPerms}
-                                </ul>
-                            : t('None')
-                            }
                         </div>
                     </div>
 
@@ -367,9 +316,6 @@ const AccessResultToSwipeCardStateMapping = {
                                 }
                                 <Button className={`btn-danger ${styles.controlButton}`} icon="stop" onClickAsync={::this.stop} disabled={playState === State.START}/>
                                 <span className={styles.timestamp}>{tsFormatted}</span>
-                            </div>
-                            <div className="col-12 col-lg-3 mb-3 text-lg-right">
-                                {selWorkerId && <Button className={`btn-${this.state.swipeCardState} ${styles.controlButton}`} icon="id-card" label={t('Swipe card')} onClickAsync={async () => await this.swipeCard(selWorkerId)} />}
                             </div>
                         </div>
                         <div>
