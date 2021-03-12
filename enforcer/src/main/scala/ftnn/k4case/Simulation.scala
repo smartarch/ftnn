@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{Duration, LocalDateTime, ZoneOffset}
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 case class WorkerState(position: Position, hasHeadGear: Boolean, standbyFor: Option[String])
 case class AccessResult(result: String)

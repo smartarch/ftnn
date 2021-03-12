@@ -25,9 +25,10 @@ object TraceRecord {
 
     val log = Logging(system, this)
 
-    val concurrencyLevel = 32
-    val iterationStart = args(0).toInt
-    val iterationUntil = args(1).toInt
+    val concurrencyLevel = 16
+    val count = args(1).toInt
+    val iterationStart = args(0).toInt * count
+    val iterationUntil = iterationStart + count
 
     var iterationsToGo = (iterationStart until iterationUntil).toList
     var iterationsInProgress = List.empty[(Int, ActorRef)]
@@ -51,7 +52,7 @@ object TraceRecord {
         val iterIdx = iterationsToGo.head
         iterationsToGo = iterationsToGo.tail
 
-        val dirPath = f"traces/v1/${iterIdx / 1000}%04d"
+        val dirPath = f"data/ftnn-traces-v1/${iterIdx / 1000}%04d"
 
         (new File(dirPath)).mkdirs()
 

@@ -4,6 +4,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Duration, LocalDateTime}
 import scala.collection.mutable
 import scala.util.Random
+import scala.language.postfixOps
 
 abstract class AbstractSimulatedWorker(val randSeed: Int, val name: String, val startTime: LocalDateTime) {
   private var random: Random = _

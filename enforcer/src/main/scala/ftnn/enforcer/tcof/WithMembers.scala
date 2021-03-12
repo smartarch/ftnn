@@ -5,6 +5,7 @@ import org.chocosolver.solver.variables.SetVar
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
+import scala.language.postfixOps
 
 trait WithMembers[+MemberType] extends WithConfig {
 

@@ -9,6 +9,7 @@ import org.chocosolver.solver.variables.{IntVar, RealVar, SetVar, Variable}
 import org.chocosolver.solver.{ResolutionPolicy, Solution, Model => ChocoModel}
 
 import scala.collection.mutable
+import scala.language.postfixOps
 
 class SolverModel extends ChocoModel {
   /** Upper bound for integer variables of the solver */
