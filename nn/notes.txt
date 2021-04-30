@@ -1,0 +1,92 @@
+=======================================================================
+Connection
+=======================================================================
+ssh bures@gpulab.ms.mff.cuni.cz -p 42222
+
+
+=======================================================================
+Image creation
+=======================================================================
+salloc -p debug-hp
+ch-builder2tar -b docker tensorflow/tensorflow:latest-gpu .
+ch-tar2dir 'tensorflow.tensorflow:latest-gpu.tar.gz' .
+exit
+
+
+salloc -p volta-hp --gpus=1 
+ch-fromhost --nvidia 'tensorflow.tensorflow:latest-gpu'
+
+ch-run 'tensorflow.tensorflow:latest-gpu' -c /home/bures /bin/bash
+pip3 install -U tensorflow scipy Pillow jinja2 tensorflow-addons keras-tuner
+exit
+
+exit
+
+
+=======================================================================
+Python39 creation
+=======================================================================
+salloc -p debug-hp
+ch-builder2tar -b docker python:3.9-buster .
+ch-tar2dir 'python:3.9-buster.tar.gz' .
+ch-run 'python:3.9-buster' -c /home/bures /bin/bash
+exit
+
+
+
+
+
+=======================================================================
+Debug session
+=======================================================================
+With GPU:
+---------
+salloc -p volta-hp --mem=32G --gpus=1 --cpus-per-task=16
+ch-run 'tensorflow.tensorflow:latest-gpu' -b /mnt/research/bures -c /home/bures /bin/bash
+
+Without GPU:
+---------
+salloc -p volta-hp --mem=32G --cpus-per-task=16
+ch-run 'tensorflow.tensorflow:latest-gpu' -b /mnt/research/bures -c /home/bures /bin/bash
+
+
+salloc -p volta-hp --mem=32G --cpus-per-task=32
+ch-run 'python:3.9-buster' -b /mnt/research/bures -c /home/bures /bin/bash
+
+
+=======================================================================
+Submitting the batch
+=======================================================================
+sbatch ensml/preprocess-1-100.sbatch
+
+
+=======================================================================
+Inspecting the job queue
+=======================================================================
+squeue
+
+
+=======================================================================
+Connecting to worker
+=======================================================================
+ssh bures@volta05
+
+
+
+
+salloc -p volta-hp --mem=128G --gpus=1 --cpus-per-task=16
+ch-run 'tensorflow.tensorflow:latest-gpu' -b /mnt/research/bures -c /home/bures /bin/bash
+cd ftnn
+python3 nn10_train_local.py
+
+
+
+
+
+
+salloc -p volta-hp -w volta03 --mem=32G --gpus=1 --cpus-per-task=16
+ch-run 'tensorflow.tensorflow:latest-gpu' -b /mnt/research/bures -c /home/bures /bin/bash
+cd mnist
+python3 main.py
+
+
