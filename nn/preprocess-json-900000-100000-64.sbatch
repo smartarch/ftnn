@@ -4,6 +4,6 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=32G
 #SBATCH --partition=volta-elp
-ch-run 'python:3.9-buster' -b /mnt/research/bures -c /home/bures/ftnn python3.9 preprocess_1.py 900000 100000 64
+ch-run 'python:3.9-buster' -b /mnt/research/bures -c /home/bures/ftnn python3.9 preprocess_json.py 900000 100000 64
 
 

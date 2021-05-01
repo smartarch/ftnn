@@ -1,67 +1,15 @@
 from tensorflow.keras import layers, activations
 
-from nn.config import JSONSimDataSetConfig, OnTheFlySimDataSetConfig
+from nn.config import JSONSimDataSetConfig, OnTheFlyMonteCarloSimDataSetConfig, BalancedSimDataSetConfig
 from nn.config import TrainingConfig
 from nn.model import NNBase
+from nn.prep_otf import accessToWorkplaceDsGen
 from nn.train import NNTrainable
 
 import tensorflow as tf
-import tensorflow_probability as tfp
-
-def timeOTFDsGen(dsConfig):
-    genBatchSize = dsConfig['genBatchSize']
-    genSize = genBatchSize * 1000
-    gatePosByWpId = tf.constant([[178.64561, 98.856514], [237.03545, 68.872505], [237.0766, 135.65627]], dtype=tf.float32)
-    gateAccessPosDistanceThreshold = 5
-
-    time = tf.random.uniform(shape=(genSize,), minval=0, maxval=36000, dtype=tf.float32)
-    posX = tf.random.uniform(shape=(genSize,), minval=0, maxval=316.43506, dtype=tf.float32)
-    posY = tf.random.uniform(shape=(genSize,), minval=0, maxval=177.88289, dtype=tf.float32)
-    pos = tf.stack([posX, posY], axis=1)
-
-    wpId = tf.random.uniform(shape=(genSize,), minval=0, maxval=3, dtype=tf.int32)
-    wpId_OneHot = tf.one_hot(wpId, depth=3, dtype=tf.float32)
-
-    gatePos = tf.gather(gatePosByWpId, wpId, axis=0)
-    gateDistSquaredElems = tf.math.square(pos - gatePos)
-    gateDist = tf.math.sqrt(gateDistSquaredElems[:,0] + gateDistSquaredElems[:,1])
-
-    hgerEvents_0 = tf.random.uniform(shape=(genSize,), minval=0, maxval=2, dtype=tf.int32)
-    hgerEvents_0_OneHot = tf.one_hot(hgerEvents_0, depth=2, dtype=tf.float32)
-
-    inputs = tf.concat([tf.expand_dims(time, axis=1), pos, wpId_OneHot, hgerEvents_0_OneHot], axis=1)
-
-    isAccessRequested = gateDist <= gateAccessPosDistanceThreshold
-    atGate = gateDist <= 10
-    hasHeadGear = hgerEvents_0 == 1
-    isRightTime = tf.logical_and(time >= 2400, time <= 33600)
-
-    outputs = tf.reduce_all([isAccessRequested, atGate, hasHeadGear, isRightTime], axis=0)
-
-    deniedAccesses = outputs == False
-    allowedAccesses = outputs == True
-
-    deniedAccessCount = tf.reduce_sum(tf.cast(deniedAccesses, dtype=tf.int32))
-    allowedAccessCount = tf.reduce_sum(tf.cast(allowedAccesses, dtype=tf.int32))
-
-    deniedWeight = 0.5 * tf.cast(1 / deniedAccessCount, dtype=tf.float32) if deniedAccessCount > 0 else tf.constant(0, dtype=tf.float32)
-    allowedWeight = 0.5 * tf.cast(1 / allowedAccessCount, dtype=tf.float32) if allowedAccessCount > 0 else tf.constant(0, dtype=tf.float32)
-    probByOutput = tf.stack([deniedWeight, allowedWeight], axis=0)
-
-    outputs = tf.cast(outputs, dtype=tf.int32)
-
-    probs = tf.gather(probByOutput, outputs, axis=0)
-    selDist = tfp.distributions.Categorical(probs=probs)
-    sel = selDist.sample((genBatchSize,))
-
-    inputs = tf.gather(inputs, sel, axis=0)
-    outputs = tf.expand_dims(tf.cast(outputs, dtype=tf.float32), axis=1)
-    outputs = tf.gather(outputs, sel, axis=0)
-    weights = tf.ones(shape=(genBatchSize, 1), dtype=tf.float32)
-
-    return (inputs, outputs, weights)
 
 
+'''
 dsConfigJSONSim_90_10 = JSONSimDataSetConfig(
     name='ftnn-traces-v1',
     tracesName='ftnn-traces-v1',
@@ -73,27 +21,37 @@ dsConfigJSONSim_90_10 = JSONSimDataSetConfig(
     allowedOnly=False
 )
 
-dsConfigJSONSim_900_100 = JSONSimDataSetConfig(
-    name='ftnn-traces-v1',
-    tracesName='ftnn-traces-v1',
-    trainSimulationCount=900,
-    valSimulationCount=100,
-    inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
-    outputKeys=['accessToWorkplace'],
-    outputSamplesPerSimulation=10800,
-    allowedOnly = False
-)
-
-dsConfigOTF1 = OnTheFlySimDataSetConfig(
-    name='ftnn-otf-1',
+dsConfigOTF = OnTheFlyMonteCarloSimDataSetConfig(
+    name='ftnn-otf',
     trainGenBatchCount=9,
     valGenBatchCount=1,
-    genBatchSize=1000,
+    allowedCountInBatch=500,
+    deniedCountInBatch=500,
     inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
     outputKeys=['accessToWorkplace'],
-    deniedOnly=False
+    batchGen=accessToWorkplaceDsGen
 )
-dsConfigOTF1['batchGen'] = lambda genBatchIdx: timeOTFDsGen(dsConfigOTF1)
+'''
+
+def getDsBalancedOTFConfig(factor):
+    return BalancedSimDataSetConfig(
+        name='ftnn-otf',
+        trainCount=9 * 48 * factor,
+        valCount=1 * 48 * factor,
+        inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
+        outputKeys=['accessToWorkplace']
+    )
+
+def getDsBalancedCombinedConfig(factor):
+    return BalancedSimDataSetConfig(
+        name='ftnn-combined',
+        trainCount=9 * 48 * factor,
+        valCount=1 * 48 * factor,
+        inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
+        outputKeys=['accessToWorkplace']
+    )
+
+
 
 class DenseBlock(layers.Layer):
     def __init__(self, name, units, dropout=None, activation='relu'):
@@ -211,7 +169,7 @@ class TrainableNN10(NNTrainable, NN10):
     @classmethod
     def createConfig(cls, config):
         return TrainingConfig(
-            dsConfig=dsConfigOTF1,
+            dsConfig=getDsBalancedCombinedConfig(1000),
             batchSize=config['batchSize'],
             learningRate=config['learningRate'],
             nnArch=config['nnArch']

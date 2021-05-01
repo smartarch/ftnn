@@ -27,9 +27,13 @@ class JSONSimDataSetConfig(ConfigLayer):
     name = 'JSONSimDataSetConfig'
     fields = {'name', 'tracesName', 'trainSimulationCount', 'valSimulationCount', 'inputKeys', 'outputKeys', 'outputSamplesPerSimulation', 'allowedOnly'}
 
-class OnTheFlySimDataSetConfig(ConfigLayer):
-    name = 'OnTheFlySimDataSetConfig'
-    fields = {'name', 'trainGenBatchCount', 'valGenBatchCount', 'genBatchSize', 'inputKeys', 'outputKeys', 'batchGen', 'deniedOnly'}
+class OnTheFlyMonteCarloSimDataSetConfig(ConfigLayer):
+    name = 'OnTheFlyMonteCarloSimDataSetConfig'
+    fields = {'name', 'trainGenBatchCount', 'valGenBatchCount', 'allowedCountInBatch', 'deniedCountInBatch', 'inputKeys', 'outputKeys', 'batchGen'}
+
+class BalancedSimDataSetConfig(ConfigLayer):
+    name = 'BalancedSimDataSetConfig'
+    fields = {'name', 'trainCount', 'valCount', 'inputKeys', 'outputKeys'}
 
 class TrainingConfig(ConfigLayer):
     name = 'TrainingConfig'

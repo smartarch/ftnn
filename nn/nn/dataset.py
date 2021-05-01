@@ -27,14 +27,45 @@ def loadJSONSimDS(dsConfig, batchSize):
     return (trainDS, valDS)
 
 
-
-def loadOnTheFlySimDS(dsConfig, batchSize):
+def loadOnTheFlyMonteCarloSimDS(dsConfig, batchSize):
     trainGenBatchCount = dsConfig['trainGenBatchCount']
     valGenBatchCount = dsConfig['valGenBatchCount']
     batchGen = dsConfig['batchGen']
 
-    trainDS = tf.data.Dataset.range(trainGenBatchCount).map(batchGen, num_parallel_calls=8).unbatch().batch(batchSize).cache()
-    valDS = tf.data.Dataset.range(valGenBatchCount).map(batchGen, num_parallel_calls=8).unbatch().batch(batchSize)
+    allowedCountInBatch = dsConfig['allowedCountInBatch']
+    deniedCountInBatch = dsConfig['deniedCountInBatch']
+    genBatchSize = allowedCountInBatch + deniedCountInBatch
+
+    outSig = (
+        tf.TensorSpec(shape=(genBatchSize, len(dsConfig['inputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(genBatchSize, len(dsConfig['outputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(genBatchSize, 1), dtype=tf.float32)
+    )
+
+    trainDS = tf.data.Dataset.from_generator(batchGen(dsConfig, trainGenBatchCount), output_signature=outSig).unbatch().batch(batchSize).cache()
+    valDS = tf.data.Dataset.from_generator(batchGen(dsConfig, valGenBatchCount), output_signature=outSig).unbatch().batch(batchSize).cache()
+
+    return (trainDS, valDS)
+
+
+def addUnitWeights(inputs, outputs):
+    return (inputs, outputs, tf.ones_like(outputs))
+
+def loadBalancedSimDS(dsConfig, batchSize):
+    dsName = dsConfig['name']
+    dsHash = dsConfig.toHash()
+
+    if dsHash in cachedDS:
+        (trainDS, valDS) = cachedDS[dsHash]
+    else:
+        with h5py.File(baseDataDir / 'dataset' / f'{dsName}-{dsHash}.hdf5', 'r') as hf:
+            trainDS = tf.data.Dataset.from_tensor_slices((hf['train-inputs'], hf['train-outputs'])).cache()
+            valDS = tf.data.Dataset.from_tensor_slices((hf['val-inputs'], hf['val-outputs'])).cache()
+
+            cachedDS[dsHash] = (trainDS, valDS)
+
+    trainDS = trainDS.batch(batchSize).map(addUnitWeights, num_parallel_calls=2).prefetch(500).shuffle(buffer_size=500)
+    valDS = valDS.batch(batchSize).map(addUnitWeights, num_parallel_calls=2).prefetch(500)
 
     return (trainDS, valDS)
 
@@ -42,7 +73,9 @@ def loadOnTheFlySimDS(dsConfig, batchSize):
 def loadDS(dsConfig, batchSize):
     if dsConfig.name == 'JSONSimDataSetConfig':
         return loadJSONSimDS(dsConfig, batchSize)
-    elif dsConfig.name == 'OnTheFlySimDataSetConfig':
-        return loadOnTheFlySimDS(dsConfig, batchSize)
+    elif dsConfig.name == 'OnTheFlyMonteCarloSimDataSetConfig':
+        return loadOnTheFlyMonteCarloSimDS(dsConfig, batchSize)
+    elif dsConfig.name == 'BalancedSimDataSetConfig':
+        return loadBalancedSimDS(dsConfig, batchSize)
     else:
         assert False
