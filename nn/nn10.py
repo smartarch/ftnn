@@ -169,7 +169,17 @@ class TrainableNN10(NNTrainable, NN10):
     @classmethod
     def createConfig(cls, config):
         return TrainingConfig(
-            dsConfig=getDsBalancedCombinedConfig(1000),
+            #dsConfig=getDsBalancedCombinedConfig(1000),
+            dsConfig=OnTheFlyMonteCarloSimDataSetConfig(
+                name='ftnn-otf',
+                trainGenBatchCount=9,
+                valGenBatchCount=1,
+                allowedCountInBatch=500,
+                deniedCountInBatch=500,
+                inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
+                outputKeys=['accessToWorkplace'],
+                batchGen=accessToWorkplaceDsGen
+            ),
             batchSize=config['batchSize'],
             learningRate=config['learningRate'],
             nnArch=config['nnArch']
