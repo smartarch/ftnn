@@ -1,0 +1,9 @@
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:4 trees:200 dev:0.9999074074074074 test:0.9997291666666667
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:5 trees:200 dev:0.9998611111111111 test:0.9996041666666666
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:3 trees:500 dev:0.9998148148148148 test:0.9997083333333333
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:5 trees:500 dev:0.9994907407407407 test:0.9995416666666667
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:5 trees:100 dev:0.9992129629629629 test:0.9993958333333334
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:3 trees:200 dev:0.9990740740740741 test:0.9991041666666667
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:4 trees:500 dev:0.9989814814814815 test:0.9987083333333333
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:4 trees:100 dev:0.9975925925925926 test:0.998125
+input_file:ftnn-otf-02ebccf01c63fa7af5c271a85ce8f4d8.hdf5 dev_size:0.05 max_depth:3 trees:100 dev:0.9960648148148148 test:0.9968125
