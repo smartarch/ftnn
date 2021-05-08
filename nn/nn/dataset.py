@@ -2,6 +2,7 @@ import h5py
 import tensorflow as tf
 
 from nn import util
+from nn.prep_synth import synthConjDsGen
 
 baseDataDir = util.getBaseDataDir()
 
@@ -48,6 +49,24 @@ def loadOnTheFlyMonteCarloSimDS(dsConfig, batchSize):
     return (trainDS, valDS)
 
 
+def loadSynthConjSimDS(dsConfig, batchSize):
+    trainGenBatchCount = dsConfig['trainGenBatchCount']
+    valGenBatchCount = dsConfig['valGenBatchCount']
+
+    countInBatch = dsConfig['countInBatch']
+
+    outSig = (
+        tf.TensorSpec(shape=(countInBatch, len(dsConfig['inputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(countInBatch, len(dsConfig['outputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(countInBatch, 1), dtype=tf.float32)
+    )
+
+    trainDS = tf.data.Dataset.from_generator(synthConjDsGen(dsConfig, trainGenBatchCount), output_signature=outSig).unbatch().batch(batchSize).cache()
+    valDS = tf.data.Dataset.from_generator(synthConjDsGen(dsConfig, valGenBatchCount), output_signature=outSig).unbatch().batch(batchSize).cache()
+
+    return (trainDS, valDS)
+
+
 def addUnitWeights(inputs, outputs):
     return (inputs, outputs, tf.ones_like(outputs))
 
@@ -75,6 +94,8 @@ def loadDS(dsConfig, batchSize):
         return loadJSONSimDS(dsConfig, batchSize)
     elif dsConfig.name == 'OnTheFlyMonteCarloSimDataSetConfig':
         return loadOnTheFlyMonteCarloSimDS(dsConfig, batchSize)
+    elif dsConfig.name == 'SynthConjSimDataSetConfig':
+        return loadSynthConjSimDS(dsConfig, batchSize)
     elif dsConfig.name == 'BalancedSimDataSetConfig':
         return loadBalancedSimDS(dsConfig, batchSize)
     else:

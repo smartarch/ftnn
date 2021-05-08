@@ -31,6 +31,10 @@ class OnTheFlyMonteCarloSimDataSetConfig(ConfigLayer):
     name = 'OnTheFlyMonteCarloSimDataSetConfig'
     fields = {'name', 'trainGenBatchCount', 'valGenBatchCount', 'allowedCountInBatch', 'deniedCountInBatch', 'inputKeys', 'outputKeys', 'batchGen'}
 
+class SynthConjSimDataSetConfig(ConfigLayer):
+    name = 'SynthConjSimDataSetConfig'
+    fields = {'name', 'trainGenBatchCount', 'valGenBatchCount', 'countInBatch', 'inputKeys', 'outputKeys'}
+
 class BalancedSimDataSetConfig(ConfigLayer):
     name = 'BalancedSimDataSetConfig'
     fields = {'name', 'trainCount', 'valCount', 'inputKeys', 'outputKeys'}

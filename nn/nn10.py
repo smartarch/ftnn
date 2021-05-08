@@ -1,13 +1,13 @@
+import math
+
+import tensorflow as tf
 from tensorflow.keras import layers, activations
 
-from nn.config import JSONSimDataSetConfig, OnTheFlyMonteCarloSimDataSetConfig, BalancedSimDataSetConfig
+from nn.config import BalancedSimDataSetConfig, OnTheFlyMonteCarloSimDataSetConfig
 from nn.config import TrainingConfig
 from nn.model import NNBase
 from nn.prep_otf import accessToWorkplaceDsGen
 from nn.train import NNTrainable
-
-import tensorflow as tf
-
 
 '''
 dsConfigJSONSim_90_10 = JSONSimDataSetConfig(
@@ -81,13 +81,55 @@ class DenseBlock(layers.Layer):
         return y
 
 
-class CorrectTime(layers.Layer):
-    def __init__(self, name, minValue, maxValue, numPoints, sigma, grid='random'):
+class BelowThreshold(layers.Layer):
+    def __init__(self, name, minValue, maxValue):
         super().__init__(name=name)
-        if grid == 'equidistant':
-            self.refPoints = tf.cast(tf.linspace(minValue, maxValue, numPoints), dtype=tf.float32)
-        elif grid == 'random':
-            self.refPoints = tf.random.uniform(shape=(numPoints,), minval=minValue, maxval=maxValue, dtype=tf.float32)
+        self.offset = tf.constant(-minValue, dtype=tf.float32)
+        self.scale = tf.constant(1 / (maxValue - minValue), dtype=tf.float32)
+        self.threshold = tf.Variable(tf.random.uniform(shape=(1,), minval=0, maxval=1, dtype=tf.float32), trainable=True)
+        print(f'name ... {self.offset} {self.scale}')
+
+    def call(self, y, training=False):
+        y = self.threshold - (y + self.offset) * self.scale
+        y = activations.sigmoid(y)
+        return y
+
+
+class AboveThreshold(layers.Layer):
+    def __init__(self, name, minValue, maxValue):
+        super().__init__(name=name)
+        self.offset = tf.constant(-minValue, dtype=tf.float32)
+        self.scale = tf.constant(1 / (maxValue - minValue), dtype=tf.float32)
+        self.threshold = tf.Variable(tf.random.uniform(shape=(1,), minval=0, maxval=1, dtype=tf.float32), trainable=True)
+        print(f'name ... {self.offset} {self.scale}')
+
+    def call(self, y, training=False):
+        y = (y + self.offset) * self.scale - self.threshold
+        y = activations.sigmoid(y)
+        return y
+
+
+class CorrectTime(layers.Layer):
+    def __init__(self, name, minValue, maxValue, capacity, sigma=None, grid='random-static'):
+        super().__init__(name=name)
+
+        if sigma is None:
+            sigma = (maxValue - minValue) / capacity
+
+        if grid == 'equidistant-static':
+            self.refPoints = tf.cast(tf.linspace(minValue, maxValue, capacity), dtype=tf.float32)
+        elif grid == 'random-static':
+            self.refPoints = tf.random.uniform(shape=(capacity,), minval=minValue, maxval=maxValue, dtype=tf.float32)
+        elif grid == 'equidistant-trainable':
+            self.refPoints = tf.Variable(
+                tf.cast(tf.linspace(minValue, maxValue, capacity), dtype=tf.float32),
+                trainable=True
+            )
+        elif grid == 'random-trainable':
+            self.refPoints = tf.Variable(
+                tf.random.uniform(shape=(capacity,), minval=minValue, maxval=maxValue, dtype=tf.float32),
+                trainable=True
+            )
         else:
             assert False
 
@@ -102,12 +144,26 @@ class CorrectTime(layers.Layer):
 
 
 class CorrectPlace(layers.Layer):
-    def __init__(self, name, minPos, maxPos, numPoints, sigma, grid='random'):
+    def __init__(self, name, minPos, maxPos, capacity, sigma=None, grid='random-static'):
         super().__init__(name=name)
-        if grid == 'random':
+
+        numPoints = capacity ** 2
+
+        if sigma is None:
+            sigma = math.sqrt((maxPos[0] - minPos[0]) * (maxPos[1] - minPos[1]) / numPoints)
+
+        if grid == 'random-static':
             self.refPoints = tf.stack(
                 [tf.random.uniform(shape=(numPoints,), minval=minPos[0], maxval=maxPos[0], dtype=tf.float32), tf.random.uniform(shape=(numPoints,), minval=minPos[1], maxval=maxPos[1], dtype=tf.float32)],
                 axis=1
+            )
+        elif grid == 'random-trainable':
+            self.refPoints = tf.Variable(
+                tf.stack(
+                    [tf.random.uniform(shape=(numPoints,), minval=minPos[0], maxval=maxPos[0], dtype=tf.float32), tf.random.uniform(shape=(numPoints,), minval=minPos[1], maxval=maxPos[1], dtype=tf.float32)],
+                    axis=1
+                ),
+                trainable=True
             )
         else:
             assert False
@@ -141,14 +197,18 @@ class NN10(NNBase):
         super().__init__(config=config, **kwargs)
 
         nnArch = config['nnArch']
-        self.time = CorrectTime('time', minValue=0, maxValue=36000, numPoints=2000, sigma=30)
-        self.placeA = CorrectPlace('placeA', minPos=(0,0), maxPos=(316.43506,177.88289), numPoints=8000, sigma=5)
-        self.placeB = CorrectPlace('placeB', minPos=(0,0), maxPos=(316.43506,177.88289), numPoints=8000, sigma=5)
-        self.placeC = CorrectPlace('placeC', minPos=(0,0), maxPos=(316.43506,177.88289), numPoints=8000, sigma=5)
+        # self.timeLow = AboveThreshold('timeLow', minValue=0, maxValue=36000)
+        # self.timeHigh = BelowThreshold('timeHigh', minValue=0, maxValue=36000)
+        self.time = CorrectTime('time', minValue=0, maxValue=36000, capacity=5)
+        self.placeA = CorrectPlace('placeA', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
+        self.placeB = CorrectPlace('placeB', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
+        self.placeC = CorrectPlace('placeC', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
         self.headGear = CorrectEvent('headGear', categoryCount=2, historyLength=1)
 
     def call(self, y, training=False):
         yTime = self.time(y[:,0:1], training=training)
+        # yTimeLow = self.timeLow(y[:,0:1], training=training)
+        # yTimeHigh = self.timeHigh(y[:,0:1], training=training)
 
         yPlaceA = self.placeA(y[:,1:3], training=training) * y[:,3:4]
         yPlaceB = self.placeB(y[:,1:3], training=training) * y[:,4:5]
@@ -169,17 +229,18 @@ class TrainableNN10(NNTrainable, NN10):
     @classmethod
     def createConfig(cls, config):
         return TrainingConfig(
-            #dsConfig=getDsBalancedCombinedConfig(1000),
-            dsConfig=OnTheFlyMonteCarloSimDataSetConfig(
-                name='ftnn-otf',
-                trainGenBatchCount=9,
-                valGenBatchCount=1,
-                allowedCountInBatch=500,
-                deniedCountInBatch=500,
-                inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
-                outputKeys=['accessToWorkplace'],
-                batchGen=accessToWorkplaceDsGen
-            ),
+            #dsConfig=getDsBalancedCombinedConfig(100),
+            dsConfig=getDsBalancedOTFConfig(100),
+            # dsConfig=OnTheFlyMonteCarloSimDataSetConfig(
+            #     name='ftnn-otf',
+            #     trainGenBatchCount=9,
+            #     valGenBatchCount=1,
+            #     allowedCountInBatch=5000,
+            #     deniedCountInBatch=5000,
+            #     inputKeys=['time', 'posX', 'posY', 'wpId:A', 'wpId:B', 'wpId:C', 'hgerEvents[0]:TAKE_HGEAR', 'hgerEvents[0]:RET_HGEAR'],
+            #     outputKeys=['accessToWorkplace'],
+            #     batchGen=accessToWorkplaceDsGen
+            # ),
             batchSize=config['batchSize'],
             learningRate=config['learningRate'],
             nnArch=config['nnArch']

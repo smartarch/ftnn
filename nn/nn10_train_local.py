@@ -8,7 +8,7 @@ config = {
         "name": "nn10",
     },
     "batchSize": 100,
-    "learningRate": 0.001,
+    "learningRate": 0.05,
     "maxEpochs": 30
 }
 
@@ -17,6 +17,6 @@ net = TrainableNN10(config=TrainableNN10.createConfig(config))
 net.buildFromConfig()
 net.summary()
 
-net.train(30)
-#net.checkResults()
+net.train(50)
+net.checkResults()
 
