@@ -51,6 +51,17 @@ def getDsBalancedCombinedConfig(factor):
         outputKeys=['accessToWorkplace']
     )
 
+def getDsBalancedSynthConjConfig(factor, conjCount):
+    deniedCatCount = 2 ** conjCount - 1
+
+    return BalancedSimDataSetConfig(
+        name='ftnn-synth-conj',
+        trainCount=9 * deniedCatCount * 2 * factor,
+        valCount=1 * deniedCatCount * 2 * factor,
+        inputKeys=[f'y{idx}' for idx in range(conjCount)],
+        outputKeys=['access']
+    )
+
 
 
 class DenseBlock(layers.Layer):
@@ -87,10 +98,10 @@ class BelowThreshold(layers.Layer):
         self.offset = tf.constant(-minValue, dtype=tf.float32)
         self.scale = tf.constant(1 / (maxValue - minValue), dtype=tf.float32)
         self.threshold = tf.Variable(tf.random.uniform(shape=(1,), minval=0, maxval=1, dtype=tf.float32), trainable=True)
-        print(f'name ... {self.offset} {self.scale}')
+        print(f'{name} ... {self.offset} {self.scale}')
 
     def call(self, y, training=False):
-        y = self.threshold - (y + self.offset) * self.scale
+        y = (self.threshold - (y + self.offset) * self.scale) * 100
         y = activations.sigmoid(y)
         return y
 
@@ -101,10 +112,10 @@ class AboveThreshold(layers.Layer):
         self.offset = tf.constant(-minValue, dtype=tf.float32)
         self.scale = tf.constant(1 / (maxValue - minValue), dtype=tf.float32)
         self.threshold = tf.Variable(tf.random.uniform(shape=(1,), minval=0, maxval=1, dtype=tf.float32), trainable=True)
-        print(f'name ... {self.offset} {self.scale}')
+        print(f'{name} ... {self.offset} {self.scale}')
 
     def call(self, y, training=False):
-        y = (y + self.offset) * self.scale - self.threshold
+        y = ((y + self.offset) * self.scale - self.threshold) * 100
         y = activations.sigmoid(y)
         return y
 
@@ -197,27 +208,46 @@ class NN10(NNBase):
         super().__init__(config=config, **kwargs)
 
         nnArch = config['nnArch']
-        # self.timeLow = AboveThreshold('timeLow', minValue=0, maxValue=36000)
-        # self.timeHigh = BelowThreshold('timeHigh', minValue=0, maxValue=36000)
-        self.time = CorrectTime('time', minValue=0, maxValue=36000, capacity=5)
-        self.placeA = CorrectPlace('placeA', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
-        self.placeB = CorrectPlace('placeB', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
-        self.placeC = CorrectPlace('placeC', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=5)
+        #self.timeLow = AboveThreshold('timeLow', minValue=0, maxValue=36000)
+        #self.timeHigh = BelowThreshold('timeHigh', minValue=0, maxValue=36000)
+
+        # self.time = CorrectTime('time', minValue=0, maxValue=36000, capacity=20)
+        self.placeA = CorrectPlace('placeA', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=20)
+        self.placeB = CorrectPlace('placeB', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=20)
+        self.placeC = CorrectPlace('placeC', minPos=(0,0), maxPos=(316.43506,177.88289), capacity=20)
         self.headGear = CorrectEvent('headGear', categoryCount=2, historyLength=1)
 
+        # self.point = [CorrectTime(name=f'points_{idx}', minValue=0, maxValue=1, capacity=20) for idx in range(10)]
+
     def call(self, y, training=False):
-        yTime = self.time(y[:,0:1], training=training)
-        # yTimeLow = self.timeLow(y[:,0:1], training=training)
-        # yTimeHigh = self.timeHigh(y[:,0:1], training=training)
+        #yTime = self.time(y[:,0:1], training=training)
+        #yTimeLow = self.timeLow(y[:,0:1], training=training)
+        #yTimeHigh = self.timeHigh(y[:,0:1], training=training)
+        yTimeLow = tf.cast(y[:, 0:1] > 2400, dtype=tf.float32)
+        yTimeHigh = tf.cast(y[:, 0:1] <= 33600, dtype=tf.float32)
 
         yPlaceA = self.placeA(y[:,1:3], training=training) * y[:,3:4]
         yPlaceB = self.placeB(y[:,1:3], training=training) * y[:,4:5]
         yPlaceC = self.placeC(y[:,1:3], training=training) * y[:,5:6]
-        yPlace = yPlaceA + yPlaceB + yPlaceC
+        yPlace = activations.sigmoid((yPlaceA + yPlaceB + yPlaceC - 0.5) * 10)
+        #yPlace = yPlaceA + yPlaceB + yPlaceC
 
         yHeadGear = self.headGear(y[:,6:8], training=training)
 
-        y = yTime * yPlace * yHeadGear
+        y = activations.sigmoid((yTimeLow + yTimeHigh + yPlace + yHeadGear - 3.5) * 10)
+        #y = yTime * yPlace * yHeadGear
+
+        # yPoint0 = self.point[0](y[:, 0:1], training=training)
+        # yPoint1 = self.point[1](y[:, 1:2], training=training)
+        # yPoint2 = self.point[2](y[:, 2:3], training=training)
+        # yPoint3 = self.point[3](y[:, 3:4], training=training)
+        # yPoint4 = self.point[4](y[:, 4:5], training=training)
+        # yPoint5 = self.point[5](y[:, 5:6], training=training)
+        # yPoint6 = self.point[6](y[:, 6:7], training=training)
+        # yPoint7 = self.point[7](y[:, 7:8], training=training)
+        # yPoint8 = self.point[8](y[:, 8:9], training=training)
+        # yPoint9 = self.point[9](y[:, 9:10], training=training)
+        # y = activations.sigmoid((yPoint0 + yPoint1 + yPoint2 + yPoint3 + yPoint4 + yPoint5 + yPoint6 + yPoint7 + yPoint8 + yPoint9 - 9.5) * 10000)
 
         return y
 
@@ -229,6 +259,7 @@ class TrainableNN10(NNTrainable, NN10):
     @classmethod
     def createConfig(cls, config):
         return TrainingConfig(
+            #dsConfig=getDsBalancedSynthConjConfig(100, 10),
             #dsConfig=getDsBalancedCombinedConfig(100),
             dsConfig=getDsBalancedOTFConfig(100),
             # dsConfig=OnTheFlyMonteCarloSimDataSetConfig(

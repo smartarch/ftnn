@@ -15,20 +15,24 @@ logging.basicConfig(format='%(asctime)s: %(message)s', level=logging.DEBUG)
 
 factor = int(sys.argv[1])
 
-dsConfigOTF = SynthConjSimDataSetConfig(
+conjCount = 10
+deniedCatCount = 2 ** conjCount - 1
+
+dsConfigSynthConj = SynthConjSimDataSetConfig(
     name='ftnn-synth-conj',
     trainGenBatchCount=9,
     valGenBatchCount=1,
-    countInBatch=100 * factor,
-    inputKeys=[f'y{idx}' for idx in range(5)],
+    allowedCountInBatch=deniedCatCount * factor,
+    deniedCountInBatch=deniedCatCount * factor,
+    inputKeys=[f'y{idx}' for idx in range(conjCount)],
     outputKeys=['access'],
 )
 
 dsConfig = BalancedSimDataSetConfig(
     name='ftnn-synth-conj',
-    trainCount=100 * factor,
-    valCount=100 * factor,
-    inputKeys=[f'y{idx}' for idx in range(5)],
+    trainCount=9 * deniedCatCount * 2 * factor,
+    valCount=1 * deniedCatCount * 2 * factor,
+    inputKeys=[f'y{idx}' for idx in range(conjCount)],
     outputKeys=['access']
 )
 
@@ -38,7 +42,7 @@ else:
     batchSize = 100000
 
 
-trainDs, valDs = loadDS(dsConfigOTF, batchSize)
+trainDs, valDs = loadDS(dsConfigSynthConj, batchSize)
 
 baseDataDir = util.getBaseDataDir()
 dsHash = dsConfig.toHash()

@@ -53,12 +53,14 @@ def loadSynthConjSimDS(dsConfig, batchSize):
     trainGenBatchCount = dsConfig['trainGenBatchCount']
     valGenBatchCount = dsConfig['valGenBatchCount']
 
-    countInBatch = dsConfig['countInBatch']
+    allowedCountInBatch = dsConfig['allowedCountInBatch']
+    deniedCountInBatch = dsConfig['deniedCountInBatch']
+    genBatchSize = allowedCountInBatch + deniedCountInBatch
 
     outSig = (
-        tf.TensorSpec(shape=(countInBatch, len(dsConfig['inputKeys'])), dtype=tf.float32),
-        tf.TensorSpec(shape=(countInBatch, len(dsConfig['outputKeys'])), dtype=tf.float32),
-        tf.TensorSpec(shape=(countInBatch, 1), dtype=tf.float32)
+        tf.TensorSpec(shape=(genBatchSize, len(dsConfig['inputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(genBatchSize, len(dsConfig['outputKeys'])), dtype=tf.float32),
+        tf.TensorSpec(shape=(genBatchSize, 1), dtype=tf.float32)
     )
 
     trainDS = tf.data.Dataset.from_generator(synthConjDsGen(dsConfig, trainGenBatchCount), output_signature=outSig).unbatch().batch(batchSize).cache()
@@ -83,7 +85,7 @@ def loadBalancedSimDS(dsConfig, batchSize):
 
             cachedDS[dsHash] = (trainDS, valDS)
 
-    trainDS = trainDS.batch(batchSize).map(addUnitWeights, num_parallel_calls=2).prefetch(500).shuffle(buffer_size=500)
+    trainDS = trainDS.batch(batchSize).map(addUnitWeights, num_parallel_calls=2).prefetch(500).unbatch().batch(batchSize).shuffle(buffer_size=500)
     valDS = valDS.batch(batchSize).map(addUnitWeights, num_parallel_calls=2).prefetch(500)
 
     return (trainDS, valDS)

@@ -53,7 +53,11 @@ class NNTrainable(NNBase):
         trainDS = self.trainDS
         valDS = self.valDS
 
-        optimizer = optimizers.Adam(learning_rate=self.config['learningRate'])
+        learningRate = self.config['learningRate']
+        # for getDsBalancedSynthConjConfig(100, 10) ... learningRate = tf.keras.experimental.CosineDecay(learningRate, (2 ** 10 - 1) * 2 * 9 * 100 * 50 // 128)
+        # for getDsBalancedOTFConfig(1000) ... learningRate = tf.keras.experimental.CosineDecay(learningRate, 9 * 48 * 1000 * 50 // 128)
+        learningRate = tf.keras.experimental.CosineDecay(learningRate, 9 * 48 * 100 * 50 // 128)
+        optimizer = optimizers.Adam(learning_rate=learningRate)
         step = tf.Variable(0, trainable=False, dtype=tf.int32)
 
         lossFn = losses.BinaryCrossentropy()
@@ -62,6 +66,7 @@ class NNTrainable(NNBase):
         valLoss = metrics.Mean(name='val_loss')
         valAccuracy = metrics.BinaryAccuracy(name='val_accuracy')
 
+        totalBatches = 0
         while step.numpy() < epochsTotal:
             step.assign_add(1)
             epoch = step.numpy()
@@ -89,6 +94,8 @@ class NNTrainable(NNBase):
                     if yieldFn is not None:
                         yieldFn()
 
+                totalBatches += 1
+
             for batchIdx, (inputs, outputs, weights) in enumerate(valDS):
                 self.evalStep(inputs, outputs, weights, lossFn, valLoss, valAccuracy)
 
@@ -102,6 +109,8 @@ class NNTrainable(NNBase):
 
             if yieldFn is not None:
                 yieldFn()
+
+        logging.info(f'Total number of batches: {totalBatches}')
 
         return {'epoch': int(epoch), 'trainLoss': float(trainLoss.result()), 'trainAccuracy': float(trainAccuracy.result()), 'valLoss': float(valLoss.result()), 'valAccuracy': float(valAccuracy.result())}
 
