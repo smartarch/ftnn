@@ -13,6 +13,8 @@ WIDTHS_STR=`echo "$WIDTHS" | tr ' ' '-'`
 DATAFILE="./data/$FILENAME"
 RESULTFILE="./results/$FILENAME-dense-${WIDTHS_STR}_$ITERATION.csv"
 
+mkdir -p ./results
+
 if [ ! -f "$DATAFILE" ]; then
     echo "Input file $DATAFILE not found..."
     exit 0
