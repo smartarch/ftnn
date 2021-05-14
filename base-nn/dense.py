@@ -10,8 +10,8 @@ def loadData(fileName, batchSize):
         trainDS = tf.data.Dataset.from_tensor_slices((hf['train-inputs'], hf['train-outputs'])).cache()
         valDS = tf.data.Dataset.from_tensor_slices((hf['val-inputs'], hf['val-outputs'])).cache()
 
-    trainDS = trainDS.shuffle(buffer_size=500).batch(batchSize).prefetch(500)
-    valDS = valDS.batch(batchSize).prefetch(500)
+    trainDS = trainDS.shuffle(buffer_size=len(trainDS)).batch(batchSize).prefetch(1000)
+    valDS = valDS.batch(batchSize).prefetch(1000)
 
     return (trainDS, valDS)
 
